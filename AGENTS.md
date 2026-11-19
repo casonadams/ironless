@@ -33,7 +33,7 @@ cd app && nsh check && nsh test
 
 All five must pass before a commit. CI (`.github/workflows/ci.yml`) runs them, packages the web build and deploys
 `main` to GitHub Pages. A local web build needs `CC_wasm32_unknown_unknown` and `AR_wasm32_unknown_unknown` pointing
-at a WebAssembly clang and `llvm-ar` (see README).
+at a WebAssembly clang and `llvm-ar` (see `docs/development.md`).
 
 ## Quality gates
 
@@ -49,6 +49,9 @@ at a WebAssembly clang and `llvm-ar` (see README).
 - **Exercises are floor or standing dumbbell moves**: no bench, no rack. Seeded exercises live in
   `catalog.rs`; their ids are saved data, so never rename one. A new seeded exercise needs a drawing.
 - **Weights are tenths of the unit** (`Weight`); the unit only labels them and converts nothing.
+- **The research behind the rules** is in `docs/why.md`, with a short version in `app/why.ts` for the Progress
+  tab's Why view. A rule change updates both; a new claim needs a primary source checked against its abstract, and
+  anything that is practice or judgment says so.
 - **Drawings** are `app/art/<exercise id>.svg`, registered in `app/art/index.ts`: 240x120, the start pose on the
   left and the end pose on the right of an arrow, drawn in one color (`#000`, strokes 5 wide, round caps, a filled
   head of radius 7, dumbbells as filled circles of radius 6) so `tintColor` can take a theme token. The app test

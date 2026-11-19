@@ -7,7 +7,8 @@ use crate::progression::SetLog;
 use crate::session::Session;
 use crate::tracker::{Tracker, TrackerError};
 
-/// Hard sets per muscle a week worth aiming for: about ten (systematic review, PMC8884877).
+/// Hard sets per muscle a week to aim for: more sets grow more muscle, with 10 or more the top group studied (Schoenfeld
+/// et al. 2017, doi:10.1080/02640414.2016.1210197).
 pub const WEEKLY_SETS_TARGET: u32 = 10;
 
 /// The sets a muscle got in a week.
