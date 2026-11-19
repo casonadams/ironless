@@ -16,32 +16,62 @@ with [Native Shell](https://nsh.dev) (NSH) and deployed to GitHub Pages, the sam
 
 - Name chosen: `ironless` (chosen from a list including bellwork and floorset).
 - Repo created and pushed with `README.md`, `LICENSE` and `.gitignore` (both copied from TiNo).
+- `mise.toml` pins the `nsh` CLI at 0.6.0 (latest stable, released 2026-11-18).
 
 Nothing else exists: no Cargo workspace, no app, no CI, no `AGENTS.md`.
 
-## Product scope (agreed so far)
+## Product scope (agreed)
 
-- Five training days a week: biceps, triceps, legs, back, chest. Shoulders or core may be added or swapped later.
+- Push / pull / legs rotation over five training days a week:
+  - Push: chest, shoulders, triceps.
+  - Pull: back, rear delts, biceps.
+  - Legs: quads, hamstrings, glutes, calves.
+- The app suggests the next day in the rotation; skipping a day does not reset anything.
 - Dumbbell-only, floor and standing exercises.
 - Log per session: exercise, sets, reps, weight, optional note or effort.
 - Views: today's workout, history, per-exercise progression with a "beat last time" hint.
 - Storage: browser local storage only, with JSON export and import.
-- Progression rules and the weekly plan live in a pure Rust core crate; the UI is a thin layer.
+- Progression rules and the plan live in a pure Rust core crate; the UI is a thin layer.
 
-## Open questions (ask the user before building the data model)
+## Decisions
 
-1. Weekly split: fixed weekdays, or suggest the next day in rotation and allow skips?
-2. Exercise library: seed it with floor and standing dumbbell moves per muscle group, or does the user supply the list?
-3. Weight handling: a fixed set of owned dumbbell weights, or any number?
+1. **Split**: push / pull / legs rotation, suggested next day, skips allowed.
+2. **Exercise library**: seeded with floor and standing dumbbell moves, each tagged with the muscles it works; the
+   user can add or swap exercises. Seed list:
+   - Chest: floor press, floor fly, push-up.
+   - Shoulders: standing overhead press, lateral raise, rear-delt fly.
+   - Triceps: lying (floor) extension, overhead extension, kickback.
+   - Back: bent-over row, single-arm row, floor pullover, Romanian deadlift.
+   - Biceps: curl, hammer curl, cross-body curl.
+   - Legs: goblet squat, split squat, reverse lunge, Romanian deadlift, floor hip thrust, calf raise.
+3. **Weights**: the user records the dumbbells they own; progression steps to the next owned weight.
+4. **Progression**: double progression. Each exercise has a rep range; when every set reaches the top of the range,
+   suggest the next owned weight and the bottom of the range. Pre-fill each set with last session's numbers.
+5. **Volume**: track weekly sets per muscle against a target of about 10.
+6. **Motivation**: a weekly session goal instead of a daily streak; show personal bests and progress; no badges,
+   points or guilt messages.
+7. **Artwork**: our own SVG line drawings, two poses per lift (start and end), one color so `tintColor` can take a
+   theme token. NSH 0.6.0 imports `.svg` files as `<Image>` sources (https://nsh.dev/elements/image/).
+
+## Research behind the decisions
+
+- Twice a week per muscle beats once (Schoenfeld 2016, PubMed 27102172); with volume equated, frequency matters
+  little (Schoenfeld 2019, PubMed 30558493). More weekly sets help, with better results above about 9 per muscle
+  (PMC8884877).
+- Loads from about 6 to 30 reps build similar muscle when sets go near failure (Schoenfeld 2017, PubMed 28834797;
+  PMC7927075), so limited home dumbbells work if reps rise.
+- Autonomous (intrinsic and identified) motivation correlates with longer fitness-app retention (JMIR mHealth 2026,
+  PMC12828317).
+- Exercise image sources checked and rejected: free-exercise-db (Unlicense, but gym photos), RepDB free tier (credit
+  required, not open data), hasaneyldrm/exercises-dataset (images belong to Gym visual, not licensed for reuse).
 
 ## Next steps
 
-1. Get answers to the open questions above.
-2. Scaffold the workspace to mirror TiNo (see "Reference: TiNo layout").
-3. Write `AGENTS.md` and expand `README.md` with setup and commands.
-4. Add `.github/workflows/ci.yml` and enable Pages in the repo settings (Settings > Pages > Source: GitHub Actions,
+1. Scaffold the workspace to mirror TiNo (see "Reference: TiNo layout"), with `nsh-core = "=0.6.0"`.
+2. Write `AGENTS.md` and expand `README.md` with setup and commands.
+3. Add `.github/workflows/ci.yml` and enable Pages in the repo settings (Settings > Pages > Source: GitHub Actions,
    or `gh api -X POST repos/casonadams/ironless/pages -f build_type=workflow`).
-5. Build the core crate test-first, then the app.
+4. Build the core crate test-first, then the app, then the SVG artwork.
 
 ## Reference: TiNo layout (`../TiNo`)
 
@@ -49,7 +79,7 @@ Read these files there before scaffolding; they are the template.
 
 | Path | Role |
 |---|---|
-| `Cargo.toml` | Workspace: `resolver = "3"`, edition 2024, `rust-version = "1.97"`, `nsh-core = "=0.5.1"` pinned, `[workspace.lints]` |
+| `Cargo.toml` | Workspace: `resolver = "3"`, edition 2024, `rust-version = "1.97"`, `nsh-core` pinned exactly (TiNo is on `=0.5.1`; ironless uses `=0.6.0`), `[workspace.lints]` |
 | `crates/calc-core` | Domain crate: pure logic, no `nsh-*` dependency, no I/O. For ironless: `crates/ironless-core` |
 | `app/native` | Bridge crate (`tino-native`): converts core types to JS values, exports the `#[class]`. Doc comments on every export are required |
 | `app/*.tsx`, `app/nsh.json`, `app/tsconfig.json` | TSX UI, NSH config (icon, theme tokens) |
@@ -85,6 +115,15 @@ cd app && nsh check && nsh test
 - The `<name>` in `dist/<name>` is the app name from `app/nsh.json`; check it so the Pages path matches the repo name.
 - `../smartalex` is a second, TSX-only NSH app (no Rust crate) if a lighter reference is useful.
 
+## NSH 0.6.0 notes
+
+- mise hides 0.6.0 behind a minimum release age; `mise install` works because `mise.toml` names the version.
+- `nsh init --template mixed` (0.6.0) generates `nsh.json` with `"rust"`, a crate using `nsh-core` and `nsh-base`
+  0.6.0, `#[native_module]`, `#[class]` and `#[module]`, and an `App.test.tsx` using `nsh/test`. A generated app
+  passed `nsh check` and `nsh test` locally.
+- Breaking: an app that declares `capabilities` in `nsh.json` must also list `application` and `homeDir` if it uses
+  them. Release notes: https://github.com/longbridge/nsh/releases/tag/v0.6.0
+
 ## Conventions to follow (user's global defaults)
 
 - Conventional Commits, imperative subject; add a `Refs: <TICKET>` trailer only if the branch name has a ticket.
@@ -96,6 +135,6 @@ cd app && nsh check && nsh test
 
 ## Verification status
 
-No code exists, so there is nothing to build or test. Pages is not enabled yet. The TiNo facts above were read from
-its `ci.yml`, `Cargo.toml`, `AGENTS.md` and `README.md`; the current NSH version was not re-checked against upstream,
-so confirm the latest compatible `nsh` release before pinning.
+No code exists yet, so there is nothing to build or test. Pages is not enabled yet. NSH 0.6.0 was confirmed as the
+latest stable release on 2026-11-18 and checked with a throwaway `nsh init --template mixed` app (`nsh check`,
+`nsh test` passed).
