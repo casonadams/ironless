@@ -3,11 +3,9 @@
 use crate::catalog::Load;
 use crate::date::Date;
 use crate::muscle::Day;
+use crate::progression::MAX_REPS;
 use crate::session::{Draft, DraftExercise, DraftSet, Session, SetRef};
 use crate::tracker::{Tracker, TrackerError};
-
-/// The most reps a set may log.
-const MAX_REPS: u32 = 999;
 
 /// A direction to step a value in.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

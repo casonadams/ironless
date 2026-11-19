@@ -5,6 +5,9 @@ use serde::{Deserialize, Serialize};
 use crate::catalog::{Exercise, Load, SETS_PER_EXERCISE};
 use crate::weight::{Rack, Unit, Weight};
 
+/// The most reps a set may log.
+pub const MAX_REPS: u32 = 999;
+
 /// One set as lifted.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SetLog {
@@ -65,15 +68,20 @@ fn next_target(exercise: &Exercise, last: &[SetLog], rack: &Rack) -> Target {
         .map(|set| set.weight)
         .max()
         .unwrap_or(Weight::ZERO);
+    let reps: Vec<u32> = last
+        .iter()
+        .filter(|set| set.weight == working)
+        .map(|set| set.reps)
+        .collect();
     let top = exercise.reps.max;
-    let all_at_top = last.len() >= SETS_PER_EXERCISE && last.iter().all(|set| set.reps >= top);
+    let all_at_top = reps.len() >= SETS_PER_EXERCISE && reps.iter().all(|done| *done >= top);
     let heavier = (exercise.load == Load::Dumbbells)
         .then(|| rack.above(working))
         .flatten();
     let (advice, sets) = match (all_at_top, heavier) {
         (true, Some(next)) => (Advice::AddWeight(next), at_weight(next, exercise.reps.min)),
-        (true, None) => (Advice::NoHeavier, one_more_rep(last, working, None)),
-        (false, _) => (Advice::AddReps, one_more_rep(last, working, Some(top))),
+        (true, None) => (Advice::NoHeavier, one_more_rep(&reps, working, MAX_REPS)),
+        (false, _) => (Advice::AddReps, one_more_rep(&reps, working, top)),
     };
     Target {
         advice,
@@ -86,16 +94,14 @@ fn at_weight(weight: Weight, reps: u32) -> Vec<SetLog> {
     vec![SetLog { weight, reps }; SETS_PER_EXERCISE]
 }
 
-/// Each of the planned sets at `weight` with one rep more than last time, at most `cap`.
-fn one_more_rep(last: &[SetLog], weight: Weight, cap: Option<u32>) -> Vec<SetLog> {
-    let fewest = last.iter().map(|set| set.reps).min().unwrap_or(0);
-    (0..SETS_PER_EXERCISE.max(last.len()))
-        .map(|index| {
-            let reps = last.get(index).map_or(fewest, |set| set.reps) + 1;
-            SetLog {
-                weight,
-                reps: cap.map_or(reps, |cap| reps.min(cap)),
-            }
+/// The planned sets at `weight`, each one rep past the matching set of `reps` (the fewest for a set beyond them), at
+/// most `cap`.
+fn one_more_rep(reps: &[u32], weight: Weight, cap: u32) -> Vec<SetLog> {
+    let fewest = reps.iter().copied().min().unwrap_or(0);
+    (0..SETS_PER_EXERCISE.max(reps.len()))
+        .map(|index| SetLog {
+            weight,
+            reps: (reps.get(index).copied().unwrap_or(fewest) + 1).min(cap),
         })
         .collect()
 }
@@ -177,6 +183,15 @@ mod tests {
             .collect()
     }
 
+    fn mixed(sets: &[(u32, u32)]) -> Vec<SetLog> {
+        sets.iter()
+            .map(|(weight, reps)| SetLog {
+                weight: Weight::whole(*weight),
+                reps: *reps,
+            })
+            .collect()
+    }
+
     #[test]
     fn double_progression_targets() {
         let owned = rack(&[15, 20, 25]);
@@ -216,6 +231,18 @@ mod tests {
                 Some(sets(20, &[12, 12])),
                 Advice::AddReps,
                 sets(20, &[12, 12, 12]),
+            ),
+            (
+                "reps at a lighter weight do not carry to the heavier one",
+                Some(mixed(&[(20, 12), (25, 8), (25, 7)])),
+                Advice::AddReps,
+                sets(25, &[9, 8, 8]),
+            ),
+            (
+                "only sets at the heaviest weight count toward the top",
+                Some(mixed(&[(25, 12), (20, 12), (20, 12)])),
+                Advice::AddReps,
+                sets(25, &[12, 12, 12]),
             ),
         ];
         for (name, last, advice, expected) in cases {
