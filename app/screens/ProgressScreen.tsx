@@ -1,9 +1,42 @@
 import { signal, Text, View } from "nsh";
 import { read, today } from "../store";
 import { Chip, Section } from "../components/controls";
+import { WhyView } from "../components/WhyView";
+
+const VIEWS = [
+  { id: "numbers", name: "Your numbers" },
+  { id: "why", name: "Why" },
+] as const;
+
+/** Progress: your numbers, or the reasons behind the rules that produce them. */
+export function ProgressScreen() {
+  const view = signal<(typeof VIEWS)[number]["id"]>("numbers");
+  return (
+    <View class="gap-4">
+      <Text role="header" class="text-3xl font-bold text-foreground">
+        Progress
+      </Text>
+      <View class="flex-row gap-2">
+        <Each of={VIEWS} key={(entry) => entry.id}>
+          {(entry) => (
+            <Chip
+              testID={`progress-view-${entry().id}`}
+              label={entry().name}
+              selected={entry().id === view()}
+              onPress={() => view.set(entry().id)}
+            />
+          )}
+        </Each>
+      </View>
+      <If when={view() === "why"} else={<ProgressNumbers />}>
+        <WhyView />
+      </If>
+    </View>
+  );
+}
 
 /** This week's sets per muscle against the target, and each logged exercise's history and best set. */
-export function ProgressScreen() {
+function ProgressNumbers() {
   const week = () => read((t) => t.week(today()));
   const logged = () => read((t) => t.logged());
   const chosen = signal<string | null>(null);
@@ -15,9 +48,6 @@ export function ProgressScreen() {
 
   return (
     <View class="gap-4">
-      <Text role="header" class="text-3xl font-bold text-foreground">
-        Progress
-      </Text>
       <Section title={week().title}>
         <Each of={week().muscles} key={(muscle) => muscle.muscle}>
           {(muscle) => (

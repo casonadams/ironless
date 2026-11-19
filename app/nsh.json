@@ -11,6 +11,7 @@
   "capabilities": {
     "host": ["backup.download"],
     "picker": true,
+    "openUrl": { "schemes": ["https"] },
     "statusBar": true
   },
   "web": { "host": "./host.js" }

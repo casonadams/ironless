@@ -167,6 +167,36 @@ test("every seeded exercise has a drawing and every drawing an exercise", async 
   expect(exercises).toBe(ids.length);
 });
 
+test("the why view explains each rule and opens its sources", async () => {
+  const app = await open("./App.tsx", NOV_18);
+  await app.press("id:tab-progress");
+  await app.press("id:progress-view-why");
+  for (const text of ["Twice a week beats once", "More sets, more muscle", "A missed day is not a broken habit"]) {
+    expect(app.texts()).toContain(text);
+  }
+  expect(app.shows("id:muscle-chest")).toBe(false);
+  await app.press("id:source-frequency-0");
+  await app.press("id:write-up");
+  expect(app.openedUrls()).toEqual([
+    "https://doi.org/10.1007/s40279-016-0543-8",
+    "https://github.com/casonadams/ironless/blob/main/docs/why.md",
+  ]);
+  await app.press("id:progress-view-numbers");
+  expect(app.shows("id:muscle-chest")).toBe(true);
+});
+
+test("a source that cannot open says so", async () => {
+  const app = await open("./App.tsx", NOV_18);
+  await app.failOpenUrls("https://doi.org/*");
+  await app.press("id:tab-progress");
+  await app.press("id:progress-view-why");
+  await app.press("id:source-habit-0");
+  await app.waitFor("id:link-problem");
+  expect(app.texts()).toContain(
+    "Could not open https://doi.org/10.1002/ejsp.674: nothing on this device opens it",
+  );
+});
+
 test("the tracker is kept between sessions", async () => {
   const first = await open("./App.tsx", NOV_18);
   await finishPushWithOneSet(first);
