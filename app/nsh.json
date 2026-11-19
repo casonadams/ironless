@@ -1,0 +1,17 @@
+{
+  "name": "ironless",
+  "id": "io.github.casonadams.ironless",
+  "version": "0.1.0",
+  "build": 1,
+  "nsh": ">=0.6, <0.7",
+  "rust": "native",
+  "theme": "theme.json",
+  "appearance": "dark",
+  "icon": "icon.png",
+  "capabilities": {
+    "host": ["backup.download"],
+    "picker": true,
+    "statusBar": true
+  },
+  "web": { "host": "./host.js" }
+}
