@@ -64,6 +64,27 @@ test("another day can be chosen in place of the suggested one", async () => {
   expect(app.shows("id:exercise-floor-press")).toBe(false);
 });
 
+test("another day cannot replace a workout with done sets", async () => {
+  const app = await open("./App.tsx", NOV_18);
+  await app.press("id:done-0-0");
+  expect(app.enabled("id:day-legs")).toBe(false);
+  expect(app.texts()).toContain("Finish, or undo the done sets, to switch day.");
+  await app.press("id:done-0-0");
+  await app.press("id:day-legs");
+  expect(app.texts()).toContain("Legs day");
+});
+
+test("a saved tracker this version cannot read is set aside, not overwritten", async () => {
+  const app = await open("./App.tsx", { ...NOV_18, storage: { "ironless.tracker": "{not a backup" } });
+  await app.waitFor("id:storage-notice");
+  expect(app.texts()).toContain("Push day");
+  await app.press("id:done-0-0");
+  expect(app.storage()["ironless.tracker.unreadable"]).toBe("{not a backup");
+  expect(app.storage()["ironless.tracker"]).not.toBe("{not a backup");
+  await app.press("id:dismiss-notice");
+  expect(app.shows("id:storage-notice")).toBe(false);
+});
+
 test("sets are added and removed, keeping one", async () => {
   const app = await open("./App.tsx", NOV_18);
   expect(app.shows("id:done-0-3")).toBe(false);

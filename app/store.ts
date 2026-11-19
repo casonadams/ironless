@@ -4,8 +4,22 @@ import { Tracker } from "ironless/native";
 /** The storage key the tracker is kept under between sessions. */
 const TRACKER_KEY = "ironless.tracker";
 
+/** Where a kept tracker this version cannot read is set aside instead of being overwritten. */
+const UNREADABLE_KEY = "ironless.tracker.unreadable";
+
 const tracker = new Tracker();
 const revision = signal(0);
+const restored = signal(false);
+const notice = signal<string | null>(null);
+
+/** Whether the last session's tracker has been brought back, so changes cannot overwrite it. */
+export const ready = (): boolean => restored();
+
+/** Something the user should know about the saved data, until dismissed. */
+export const storageNotice = (): string | null => notice();
+
+/** Hides the storage notice. */
+export const dismissNotice = (): void => notice.set(null);
 
 /** Reads from the tracker, tracked so the reader runs again after every change. */
 export function read<T>(view: (tracker: Tracker) => T): T {
@@ -20,16 +34,18 @@ export function change(action: (tracker: Tracker) => void): void {
   void Storage.setItem(TRACKER_KEY, tracker.save());
 }
 
-/** Brings back the tracker the last session kept; a kept one this version cannot read is replaced. */
+/** Brings back the tracker the last session kept. One this version cannot read is set aside under its own key and the
+ * app starts fresh, saying so. */
 export async function restoreTracker(): Promise<void> {
   const kept = await Storage.getItem(TRACKER_KEY);
-  if (kept === null) return;
   try {
-    tracker.restore(kept);
+    if (kept !== null) tracker.restore(kept);
     revision.set(revision() + 1);
   } catch (error) {
-    console.warn(`starting a new tracker: ${error}`);
+    await Storage.setItem(UNREADABLE_KEY, kept ?? "");
+    notice.set(`Your saved workouts could not be read (${reason(error)}), so the app started fresh. A copy was kept.`);
   }
+  restored.set(true);
 }
 
 const pad = (value: number): string => String(value).padStart(2, "0");

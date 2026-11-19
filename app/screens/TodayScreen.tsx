@@ -16,6 +16,8 @@ export function TodayScreen() {
     finished.set(`${day} workout saved. Next up: ${dayName(workout().day)}.`);
   };
 
+  const started = () => workout().canFinish;
+
   return (
     <View class="gap-4">
       <View class="gap-1">
@@ -33,14 +35,18 @@ export function TodayScreen() {
               testID={`day-${entry().day}`}
               label={entry().day === workout().suggested ? `${entry().name} (next)` : entry().name}
               selected={entry().day === workout().day}
+              disabled={started() && entry().day !== workout().day}
               onPress={() => {
                 finished.set(null);
-                if (entry().day !== workout().day) change((t) => t.chooseDay(entry().day));
+                change((t) => t.chooseDay(entry().day));
               }}
             />
           )}
         </Each>
       </View>
+      <If when={started()}>
+        <Text class="text-sm text-muted-foreground">Finish, or undo the done sets, to switch day.</Text>
+      </If>
       <If when={finished()}>
         {(message) => (
           <Text testID="finished" class="rounded-(--radius) bg-done/15 p-3 text-done">
@@ -48,8 +54,8 @@ export function TodayScreen() {
           </Text>
         )}
       </If>
-      <Each of={workout().exercises.map((exercise) => exercise.id)}>
-        {(_id, index) => <ExerciseCard exercise={() => workout().exercises[index()]} index={index} />}
+      <Each of={workout().exercises} key={(exercise) => exercise.id}>
+        {(exercise, index) => <ExerciseCard exercise={exercise} index={index} />}
       </Each>
       <If when={workout().exercises.length === 0}>
         <Text class="text-muted-foreground">This day has no exercises. Add some on the Plan tab.</Text>

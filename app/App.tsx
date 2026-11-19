@@ -1,10 +1,11 @@
 import { mount, Scroll, signal, Text, View } from "nsh";
+import { Action } from "./components/controls";
 import { HistoryScreen } from "./screens/HistoryScreen";
 import { PlanScreen } from "./screens/PlanScreen";
 import { ProgressScreen } from "./screens/ProgressScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { TodayScreen } from "./screens/TodayScreen";
-import { restoreTracker } from "./store";
+import { dismissNotice, ready, restoreTracker, storageNotice } from "./store";
 
 const TABS = [
   { id: "today", name: "Today", screen: TodayScreen },
@@ -29,13 +30,23 @@ function App() {
       }}
     >
       <Scroll class="flex-1">
-        <View class="w-full self-center p-4 pb-8" style={{ maxWidth: 640 }}>
-          <Each of={[tab()]} key={(shown) => shown.id}>
-            {(shown) => {
-              const Screen = shown().screen;
-              return <Screen />;
-            }}
-          </Each>
+        <View class="w-full gap-4 self-center p-4 pb-8" style={{ maxWidth: 640 }}>
+          <If when={storageNotice()}>
+            {(message) => (
+              <View testID="storage-notice" class="gap-3 rounded-(--radius) border border-destructive bg-card p-4">
+                <Text class="text-sm text-card-foreground">{message()}</Text>
+                <Action label="Dismiss" testID="dismiss-notice" onPress={dismissNotice} />
+              </View>
+            )}
+          </If>
+          <If when={ready()} else={<Text class="text-muted-foreground">Loading your workouts</Text>}>
+            <Each of={[tab()]} key={(shown) => shown.id}>
+              {(shown) => {
+                const Screen = shown().screen;
+                return <Screen />;
+              }}
+            </Each>
+          </If>
         </View>
       </Scroll>
       <View role="tablist" class="flex-row border-t border-border bg-card">

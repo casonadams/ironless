@@ -33,6 +33,7 @@ type ChipProps = {
   selected: boolean;
   onPress: () => void;
   testID?: string;
+  disabled?: boolean;
 };
 
 /** One choice of a row of choices, highlighted while selected. */
@@ -42,8 +43,9 @@ export function Chip(props: ChipProps) {
       role="button"
       testID={props.testID}
       accessibilityState={{ selected: props.selected }}
+      disabled={props.disabled}
       onPress={props.onPress}
-      class={`${props.selected ? "bg-primary" : "bg-secondary"} rounded-full px-4 py-2 active:opacity-70`}
+      class={`${props.selected ? "bg-primary" : "bg-secondary"} rounded-full px-4 py-2 active:opacity-70 disabled:opacity-40`}
     >
       <Text class={`${props.selected ? "text-primary-foreground" : "text-secondary-foreground"} text-sm font-semibold`}>
         {props.label}
