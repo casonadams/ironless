@@ -4,6 +4,7 @@ import type { Muscle } from "ironless/native";
 import { DAYS } from "../days";
 import { change, read, reason } from "../store";
 import { Action, Chip, Section } from "../components/controls";
+import { HowToButton } from "../components/HowTo";
 
 /** Each day's exercises to include or leave out, and a form to add the user's own. */
 export function PlanScreen() {
@@ -52,9 +53,12 @@ export function PlanScreen() {
         <Each of={rows()} key={(row) => row.id}>
           {(row) => (
             <View class="flex-row items-center justify-between gap-3">
+              <HowToButton id={row().id} name={row().name} position={row().position ?? null} />
               <View class="flex-1">
                 <Text class="text-base text-card-foreground">{row().name}</Text>
-                <Text class="text-sm text-muted-foreground">{row().reps}</Text>
+                <Text class="text-sm text-muted-foreground">
+                  {row().position ? `${row().position} - ${row().reps}` : row().reps}
+                </Text>
               </View>
               <Chip
                 testID={`plan-${row().id}`}

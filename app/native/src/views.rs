@@ -20,6 +20,8 @@ pub struct WorkoutExercise {
     pub id: String,
     pub name: String,
     pub muscle: Muscle,
+    /// How the body is placed (`On the floor`), if the exercise says.
+    pub position: Option<String>,
     /// What to aim for, from the last workout with it.
     pub hint: String,
     /// Whether its weight steps over the rack (false for bodyweight moves).
@@ -133,6 +135,8 @@ pub struct PlanRow {
     pub id: String,
     pub name: String,
     pub muscle: Muscle,
+    /// How the body is placed (`Standing`), if the exercise says.
+    pub position: Option<String>,
     /// `8-12 reps`.
     pub reps: String,
     pub planned: bool,
@@ -210,6 +214,7 @@ fn workout_exercise(
         id: exercise.id.to_string(),
         name: exercise.name.clone(),
         muscle: exercise.muscle.into(),
+        position: position(exercise),
         hint,
         loaded: exercise.load == core::Load::Dumbbells,
         sets: sets.collect(),
@@ -283,6 +288,10 @@ pub fn progress(tracker: &core::Tracker, id: &core::ExerciseId) -> Result<Progre
     })
 }
 
+fn position(exercise: &core::Exercise) -> Option<String> {
+    exercise.position.map(|position| position.name().to_owned())
+}
+
 pub fn plan(tracker: &core::Tracker, day: core::Day) -> Vec<PlanRow> {
     let exercises = tracker.exercises().filter(|exercise| exercise.day == day);
     exercises
@@ -290,6 +299,7 @@ pub fn plan(tracker: &core::Tracker, day: core::Day) -> Vec<PlanRow> {
             id: exercise.id.to_string(),
             name: exercise.name.clone(),
             muscle: exercise.muscle.into(),
+            position: position(exercise),
             reps: format!("{} reps", exercise.reps),
             planned: tracker.is_planned(&exercise.id),
         })

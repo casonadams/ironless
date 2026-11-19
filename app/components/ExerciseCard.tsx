@@ -3,6 +3,7 @@ import type { WorkoutExercise } from "ironless/native";
 import { art } from "../art";
 import { change } from "../store";
 import { Action, Stepper } from "./controls";
+import { HowToButton } from "./HowTo";
 
 type ExerciseCardProps = {
   exercise: () => WorkoutExercise;
@@ -25,7 +26,14 @@ export function ExerciseCard(props: ExerciseCardProps) {
           )}
         </If>
         <View class="flex-1 gap-1">
-          <Text class="text-lg font-bold text-card-foreground">{props.exercise().name}</Text>
+          <View class="flex-row items-center gap-2">
+            <Text class="flex-1 text-lg font-bold text-card-foreground">{props.exercise().name}</Text>
+            <HowToButton
+              id={props.exercise().id}
+              name={props.exercise().name}
+              position={props.exercise().position ?? null}
+            />
+          </View>
           <Text class="text-sm text-muted-foreground">{props.exercise().hint}</Text>
         </View>
       </View>

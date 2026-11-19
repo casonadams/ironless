@@ -1,6 +1,7 @@
 import { expect, open, test } from "nsh/test";
 import type { App } from "nsh/test";
 import { DRAWINGS } from "./art";
+import { HOW_TO } from "./art/howto";
 
 /** Wednesday, November 18, 2026, at noon local time. */
 const NOV_18 = { clock: { time: new Date(2026, 10, 18, 12) } };
@@ -165,6 +166,39 @@ test("every seeded exercise has a drawing and every drawing an exercise", async 
   }
   expect(drawn).toBe(ids.length);
   expect(exercises).toBe(ids.length);
+  expect(Object.keys(HOW_TO).sort()).toEqual([...ids].sort());
+});
+
+test("the info button explains a lift only when asked", async () => {
+  const app = await open("./App.tsx", NOV_18);
+  expect(app.shows("id:howto-sheet")).toBe(false);
+  await app.press("id:howto-floor-press");
+  await app.waitFor("id:howto-sheet");
+  for (const text of [
+    "ON THE FLOOR",
+    "1. Lie on your back, knees bent, a dumbbell in each hand over your chest.",
+    "Cue: Keep elbows about 45 degrees from your body, not flared out.",
+  ]) {
+    expect(app.texts()).toContain(text);
+  }
+  await app.press("id:howto-close");
+  expect(app.shows("id:howto-sheet")).toBe(false);
+});
+
+test("the plan explains each lift, and the user's own say they have no steps", async () => {
+  const app = await open("./App.tsx", NOV_18);
+  await app.press("id:tab-plan");
+  await app.press("id:plan-day-pull");
+  expect(app.texts()).toContain("Bent over - 8-12 reps");
+  await app.press("id:howto-single-arm-row");
+  await app.waitFor("id:howto-sheet");
+  expect(app.texts()).toContain("Cue: Pull with your elbow, not your hand, and keep your shoulders level.");
+  await app.press("id:howto-close");
+  await app.type("id:new-exercise-name", "Zottman curl");
+  await app.press("id:add-exercise");
+  await app.press("id:howto-custom-1");
+  await app.waitFor("id:howto-sheet");
+  expect(app.texts()).toContain("Your own exercise: no steps are written for it.");
 });
 
 test("the why view explains each rule and opens its sources", async () => {

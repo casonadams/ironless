@@ -47,7 +47,8 @@ at a WebAssembly clang and `llvm-ar` (see `docs/development.md`).
   sets per muscle a week (`WEEKLY_SETS_TARGET`), double progression over the dumbbells the user owns, a weekly
   workout goal instead of a daily streak, no badges or guilt messages.
 - **Exercises are floor or standing dumbbell moves**: no bench, no rack. Seeded exercises live in
-  `catalog.rs`; their ids are saved data, so never rename one. A new seeded exercise needs a drawing.
+  `catalog.rs`; their ids are saved data, so never rename one. A new seeded exercise needs a position, a drawing and
+  instructions (`app/art/howto.ts`: at most four one-line steps and one cue, plain and safe).
 - **Weights are tenths of the unit** (`Weight`); the unit only labels them and converts nothing.
 - **The research behind the rules** is in `docs/why.md`, with a short version in `app/why.ts` for the Progress
   tab's Why view. A rule change updates both; a new claim needs a primary source checked against its abstract, and
