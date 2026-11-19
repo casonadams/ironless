@@ -15,7 +15,8 @@ Three layers; dependencies point down only.
 - `Tracker` in the core is the single aggregate. Workout changes live in `workout.rs`, plan and settings in
   `tracker.rs`, weekly totals and progress in `summary.rs`, save/load in `persist.rs`.
 - The app reads the tracker through `read()` and changes it through `change()` in `app/store.ts`, which bumps a
-  revision signal and saves `Tracker.save()` under `ironless.tracker` after every change. Rust's `nsh_core::storage`
+  revision signal and saves `Tracker.save()` under `ironless.tracker` after every change. The screens show only
+  once `restoreTracker()` has finished, so no change can overwrite the saved tracker. Rust's `nsh_core::storage`
   is not reachable from class methods called by TSX.
 - Dates cross the bridge as local `YYYY-MM-DD` text from `today()` in `app/store.ts`; the core never reads a clock.
 - Backups: Settings posts `backup.download` to the page host (`app/host.js`), which downloads the save text as a
@@ -57,7 +58,8 @@ at a WebAssembly clang and `llvm-ar` (see README).
 - **Colors come from theme tokens only** (`bg-card`, `text-muted-foreground`, `token("foreground")`), defined in
   `app/theme.json`. No raw colors or palette classes in components.
 - **Saved state** has a version (`SNAPSHOT_VERSION` in `persist.rs`). A new field with a serde default keeps the
-  version; any change an older snapshot cannot be read under means a new version, and the app starts fresh.
+  version; any change an older snapshot cannot be read under means a new version. The app sets a save it cannot read
+  aside under `ironless.tracker.unreadable`, starts fresh and tells the user; it never overwrites one.
 - **NSH** is pinned in `mise.toml`, as `=0.6.0` for `nsh-core` in `Cargo.toml` and as `"nsh"` in `app/nsh.json`;
   upgrade all three together and rerun every check. Never edit `app/.nsh/`; it is generated.
 - **The app icon** (`app/icon.png`, set in `nsh.json`; NSH derives the favicon and web app icons from it) is rendered
