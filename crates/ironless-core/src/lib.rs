@@ -12,7 +12,7 @@ pub mod tracker;
 pub mod weight;
 pub mod workout;
 
-pub use catalog::{Exercise, ExerciseId, Load, RepRange, SETS_PER_EXERCISE};
+pub use catalog::{Exercise, ExerciseId, Load, Position, RepRange, SETS_PER_EXERCISE};
 pub use date::{Date, InvalidDate};
 pub use muscle::{Day, Muscle};
 pub use persist::LoadError;

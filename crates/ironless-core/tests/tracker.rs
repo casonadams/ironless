@@ -251,8 +251,10 @@ fn custom_exercises_join_their_muscles_day() {
         .add_exercise("  Zottman curl ", Muscle::Biceps)
         .expect("added");
     assert_eq!(
-        tracker.exercise(&added).map(|e| (e.name.as_str(), e.day)),
-        Some(("Zottman curl", Day::Pull))
+        tracker
+            .exercise(&added)
+            .map(|e| (e.name.as_str(), e.day, e.position)),
+        Some(("Zottman curl", Day::Pull, None))
     );
     assert!(names(&tracker, Day::Pull).contains(&"Zottman curl".to_owned()));
     let cases = [

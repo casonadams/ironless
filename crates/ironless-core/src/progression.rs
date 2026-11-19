@@ -163,6 +163,7 @@ mod tests {
             muscle: Muscle::Biceps,
             reps: RepRange { min: 8, max: 12 },
             load,
+            position: None,
         }
     }
 

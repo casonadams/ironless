@@ -178,6 +178,7 @@ impl Tracker {
             muscle,
             reps: RepRange { min: 8, max: 12 },
             load: Load::Dumbbells,
+            position: None,
         });
         self.plan.push(id.clone());
         self.refresh_unstarted_workout();

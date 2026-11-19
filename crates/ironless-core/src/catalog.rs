@@ -32,6 +32,29 @@ pub enum Load {
     Bodyweight,
 }
 
+/// How the body is placed for an exercise.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Position {
+    /// On the floor: on the back, or face down for a push-up.
+    Floor,
+    /// Upright on the feet.
+    Standing,
+    /// Hinged forward at the hips, or braced on a knee.
+    BentOver,
+}
+
+impl Position {
+    /// The position as the app shows it.
+    pub fn name(self) -> &'static str {
+        match self {
+            Position::Floor => "On the floor",
+            Position::Standing => "Standing",
+            Position::BentOver => "Bent over",
+        }
+    }
+}
+
 /// The stable name of an exercise in plans, logs and saved data.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
@@ -64,6 +87,9 @@ pub struct Exercise {
     pub muscle: Muscle,
     pub reps: RepRange,
     pub load: Load,
+    /// How the body is placed; the user's own exercises do not say.
+    #[serde(default)]
+    pub position: Option<Position>,
 }
 
 /// A seeded exercise and whether the starting plan includes it.
@@ -74,10 +100,11 @@ struct Seed {
     muscle: Muscle,
     reps: (u32, u32),
     load: Load,
+    position: Position,
     planned: bool,
 }
 
-/// A planned dumbbell exercise for `muscle` on that muscle's day, 8 to 12 reps.
+/// A planned standing dumbbell exercise for `muscle` on that muscle's day, 8 to 12 reps.
 const fn seed(id: &'static str, name: &'static str, muscle: Muscle) -> Seed {
     Seed {
         id,
@@ -86,11 +113,27 @@ const fn seed(id: &'static str, name: &'static str, muscle: Muscle) -> Seed {
         muscle,
         reps: (8, 12),
         load: Load::Dumbbells,
+        position: Position::Standing,
         planned: true,
     }
 }
 
 impl Seed {
+    /// Done on the floor.
+    const fn floor(self) -> Seed {
+        Seed {
+            position: Position::Floor,
+            ..self
+        }
+    }
+
+    /// Done bent over.
+    const fn bent_over(self) -> Seed {
+        Seed {
+            position: Position::BentOver,
+            ..self
+        }
+    }
     /// Aims for `min` to `max` reps.
     const fn reps(self, min: u32, max: u32) -> Seed {
         Seed {
@@ -127,8 +170,10 @@ impl Seed {
 }
 
 const SEEDS: [Seed; 22] = [
-    seed("floor-press", "Floor press", Muscle::Chest),
-    seed("floor-fly", "Floor fly", Muscle::Chest).isolation(),
+    seed("floor-press", "Floor press", Muscle::Chest).floor(),
+    seed("floor-fly", "Floor fly", Muscle::Chest)
+        .isolation()
+        .floor(),
     seed(
         "overhead-press",
         "Standing overhead press",
@@ -140,7 +185,8 @@ const SEEDS: [Seed; 22] = [
         "Lying triceps extension",
         Muscle::Triceps,
     )
-    .isolation(),
+    .isolation()
+    .floor(),
     seed(
         "overhead-extension",
         "Overhead triceps extension",
@@ -150,15 +196,20 @@ const SEEDS: [Seed; 22] = [
     seed("push-up", "Push-up", Muscle::Chest)
         .bodyweight()
         .reps(8, 20)
+        .floor()
         .alternate(),
     seed("kickback", "Triceps kickback", Muscle::Triceps)
         .isolation()
+        .bent_over()
         .alternate(),
-    seed("bent-over-row", "Bent-over row", Muscle::Back),
-    seed("single-arm-row", "Single-arm row", Muscle::Back),
-    seed("floor-pullover", "Floor pullover", Muscle::Back).isolation(),
+    seed("bent-over-row", "Bent-over row", Muscle::Back).bent_over(),
+    seed("single-arm-row", "Single-arm row", Muscle::Back).bent_over(),
+    seed("floor-pullover", "Floor pullover", Muscle::Back)
+        .isolation()
+        .floor(),
     seed("rear-delt-fly", "Rear delt fly", Muscle::Shoulders)
         .isolation()
+        .bent_over()
         .on(Day::Pull),
     seed("curl", "Curl", Muscle::Biceps),
     seed("hammer-curl", "Hammer curl", Muscle::Biceps),
@@ -166,7 +217,7 @@ const SEEDS: [Seed; 22] = [
     seed("goblet-squat", "Goblet squat", Muscle::Quads),
     seed("split-squat", "Split squat", Muscle::Quads),
     seed("romanian-deadlift", "Romanian deadlift", Muscle::Hamstrings),
-    seed("hip-thrust", "Floor hip thrust", Muscle::Glutes),
+    seed("hip-thrust", "Floor hip thrust", Muscle::Glutes).floor(),
     seed("calf-raise", "Standing calf raise", Muscle::Calves).reps(12, 20),
     seed("reverse-lunge", "Reverse lunge", Muscle::Quads).alternate(),
     seed(
@@ -189,6 +240,7 @@ impl Seed {
                 max: self.reps.1,
             },
             load: self.load,
+            position: Some(self.position),
         }
     }
 }
@@ -242,6 +294,31 @@ mod tests {
                 .iter()
                 .all(|exercise| exercise.load == Load::Dumbbells)
         );
+    }
+
+    #[test]
+    fn seeded_exercises_say_how_the_body_is_placed() {
+        let exercises = seeded();
+        let position = |id: &str| {
+            exercises
+                .iter()
+                .find(|exercise| exercise.id.as_str() == id)
+                .and_then(|exercise| exercise.position)
+        };
+        let cases = [
+            ("floor-press", Position::Floor),
+            ("push-up", Position::Floor),
+            ("hip-thrust", Position::Floor),
+            ("bent-over-row", Position::BentOver),
+            ("kickback", Position::BentOver),
+            ("rear-delt-fly", Position::BentOver),
+            ("overhead-press", Position::Standing),
+            ("goblet-squat", Position::Standing),
+        ];
+        for (id, expected) in cases {
+            assert_eq!(position(id), Some(expected), "{id}");
+        }
+        assert!(exercises.iter().all(|exercise| exercise.position.is_some()));
     }
 
     #[test]
