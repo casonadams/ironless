@@ -2,3 +2,4 @@ target/
 .nsh/
 .DS_Store
 .rho/
+.playwright-mcp/
