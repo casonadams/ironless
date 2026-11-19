@@ -2,17 +2,19 @@
   <path d="M4 112H236" stroke-width="3"/>
   <path d="M110 60h18m-7-7 7 7-7 7" stroke-width="4"/>
   <g>
-    <circle cx="55" cy="42" r="7" fill="#000" stroke="none"/>
-    <path d="M55 50V68M40 50H70M48 70H62M49 70 46 108M61 70 64 108"/>
-    <path d="M40 50 38 66V80M70 50 72 66V80"/>
-    <circle cx="38" cy="85" r="6" fill="#000" stroke="none"/>
-    <circle cx="72" cy="85" r="6" fill="#000" stroke="none"/>
+    <circle cx="55" cy="63" r="7" fill="#000" stroke="none"/>
+    <path d="M38 56H46M64 56H72M44 58 50 78H60L66 58"/>
+    <path d="M50 78 43 93 47 108H41M60 78 67 93 63 108H69"/>
+    <path d="M38 56 39 72 41 86M72 56 71 72 69 86"/>
+    <circle cx="41" cy="91" r="6" fill="#000" stroke="none"/>
+    <circle cx="69" cy="91" r="6" fill="#000" stroke="none"/>
   </g>
   <g transform="translate(130 0)">
-    <circle cx="55" cy="42" r="7" fill="#000" stroke="none"/>
-    <path d="M55 50V68M40 50H70M48 70H62M49 70 46 108M61 70 64 108"/>
-    <path d="M40 50 24 52 11 55M70 50 86 52 99 55"/>
-    <circle cx="7" cy="56" r="6" fill="#000" stroke="none"/>
-    <circle cx="103" cy="56" r="6" fill="#000" stroke="none"/>
+    <circle cx="55" cy="63" r="7" fill="#000" stroke="none"/>
+    <path d="M38 56H46M64 56H72M44 58 50 78H60L66 58"/>
+    <path d="M50 78 43 93 47 108H41M60 78 67 93 63 108H69"/>
+    <path d="M38 56 24 59 12 55M72 56 86 59 98 55"/>
+    <circle cx="7" cy="54" r="6" fill="#000" stroke="none"/>
+    <circle cx="103" cy="54" r="6" fill="#000" stroke="none"/>
   </g>
 </svg>
