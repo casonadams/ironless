@@ -24,9 +24,17 @@ impl Tracker {
         self.draft.as_ref().expect("a workout was just started")
     }
 
-    /// Starts `day`'s workout in place of the one in progress, whose sets are dropped.
-    pub fn choose_day(&mut self, day: Day) {
-        self.draft = Some(self.draft_for(day));
+    /// Starts `day`'s workout in place of the one in progress. Refused once a set of another day's workout is done;
+    /// choosing the day already started keeps its sets.
+    pub fn choose_day(&mut self, day: Day) -> Result<(), TrackerError> {
+        match self.draft.as_ref().filter(|draft| draft.any_done()) {
+            Some(started) if started.day == day => Ok(()),
+            Some(_) => Err(TrackerError::WorkoutStarted),
+            None => {
+                self.draft = Some(self.draft_for(day));
+                Ok(())
+            }
+        }
     }
 
     /// Steps the set's weight to the next owned dumbbell up or down; bodyweight sets stay as they are.

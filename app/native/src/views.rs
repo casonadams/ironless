@@ -174,37 +174,39 @@ pub struct SettingsView {
     pub weights: Vec<RackWeight>,
 }
 
-pub fn workout(tracker: &mut core::Tracker) -> Workout {
+pub fn workout(tracker: &mut core::Tracker) -> Result<Workout, String> {
     let suggested = tracker.suggested_day().into();
     let draft = tracker.workout().clone();
     let exercises = draft
         .exercises
         .iter()
-        .filter_map(|exercise| workout_exercise(tracker, exercise))
-        .collect();
-    Workout {
+        .map(|exercise| workout_exercise(tracker, exercise))
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(Workout {
         day: draft.day.into(),
         suggested,
         exercises,
         can_finish: draft.any_done(),
-    }
+    })
 }
 
 fn workout_exercise(
     tracker: &core::Tracker,
     drafted: &core::DraftExercise,
-) -> Option<WorkoutExercise> {
-    let exercise = tracker.exercise(&drafted.exercise)?;
-    let hint = tracker
-        .target(&exercise.id)
-        .ok()?
-        .hint(exercise, tracker.unit());
+) -> Result<WorkoutExercise, String> {
+    let target = tracker
+        .target(&drafted.exercise)
+        .map_err(|error| error.to_string())?;
+    let exercise = tracker.exercise(&drafted.exercise).ok_or_else(|| {
+        core::TrackerError::UnknownExercise(drafted.exercise.to_string()).to_string()
+    })?;
+    let hint = target.hint(exercise, tracker.unit());
     let sets = drafted.sets.iter().map(|set| WorkoutSet {
         weight: set.weight.set_label(tracker.unit()),
         reps: set.reps,
         done: set.done,
     });
-    Some(WorkoutExercise {
+    Ok(WorkoutExercise {
         id: exercise.id.to_string(),
         name: exercise.name.clone(),
         muscle: exercise.muscle.into(),

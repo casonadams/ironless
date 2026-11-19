@@ -4,11 +4,12 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-use crate::catalog::{Exercise, ExerciseId, seeded};
+use crate::catalog::{Exercise, ExerciseId, RepRange, seeded};
 use crate::muscle::Day;
+use crate::progression::MAX_REPS;
 use crate::session::{Draft, Session};
 use crate::tracker::Tracker;
-use crate::weight::{Rack, Unit};
+use crate::weight::{Rack, Unit, Weight};
 
 /// The snapshot format written by this version; a snapshot of another version is not read.
 const SNAPSHOT_VERSION: u32 = 1;
@@ -37,6 +38,8 @@ pub enum LoadError {
     Version(u32),
     /// The snapshot names an exercise it does not define.
     UnknownExercise(ExerciseId),
+    /// The snapshot holds a value the tracker never writes.
+    Invalid(&'static str),
 }
 
 impl fmt::Display for LoadError {
@@ -47,6 +50,7 @@ impl fmt::Display for LoadError {
                 write!(f, "backup version {version} is not {SNAPSHOT_VERSION}")
             }
             LoadError::UnknownExercise(id) => write!(f, "backup names an unknown exercise {id:?}"),
+            LoadError::Invalid(what) => write!(f, "backup holds {what}"),
         }
     }
 }
@@ -87,14 +91,50 @@ impl Tracker {
             next_day: snapshot.next_day,
             draft: snapshot.workout,
         };
-        let unknown = tracker
-            .referenced()
-            .find(|id| tracker.exercise(id).is_none())
-            .cloned();
-        match unknown {
-            Some(id) => Err(LoadError::UnknownExercise(id)),
-            None => Ok(tracker),
+        tracker.check_references()?;
+        tracker.check_values()?;
+        Ok(tracker)
+    }
+
+    fn check_references(&self) -> Result<(), LoadError> {
+        match self.referenced().find(|id| self.exercise(id).is_none()) {
+            Some(id) => Err(LoadError::UnknownExercise(id.clone())),
+            None => Ok(()),
         }
+    }
+
+    fn check_values(&self) -> Result<(), LoadError> {
+        if self.rack.weights().any(|weight| weight == Weight::ZERO) {
+            return Err(LoadError::Invalid("a dumbbell weighing 0"));
+        }
+        if !self
+            .custom
+            .iter()
+            .all(|exercise| valid_range(exercise.reps))
+        {
+            return Err(LoadError::Invalid(
+                "an exercise with a rep range it cannot have",
+            ));
+        }
+        if !self.reps_kept().all(|reps| (1..=MAX_REPS).contains(&reps)) {
+            return Err(LoadError::Invalid("a set with reps it cannot have"));
+        }
+        Ok(())
+    }
+
+    /// The reps of every logged set and every set of the workout in progress.
+    fn reps_kept(&self) -> impl Iterator<Item = u32> {
+        let logged = self
+            .sessions
+            .iter()
+            .flat_map(|session| &session.exercises)
+            .flat_map(|log| log.sets.iter().map(|set| set.reps));
+        let drafted = self
+            .draft
+            .iter()
+            .flat_map(|draft| &draft.exercises)
+            .flat_map(|exercise| exercise.sets.iter().map(|set| set.reps));
+        logged.chain(drafted)
     }
 
     /// Every exercise id the plan, the workouts and the workout in progress name.
@@ -109,4 +149,8 @@ impl Tracker {
             .flat_map(|draft| draft.exercises.iter().map(|exercise| &exercise.exercise));
         self.plan.iter().chain(logged).chain(drafted)
     }
+}
+
+fn valid_range(reps: RepRange) -> bool {
+    1 <= reps.min && reps.min <= reps.max && reps.max <= MAX_REPS
 }

@@ -23,6 +23,8 @@ pub enum TrackerError {
     NoSuchSet,
     /// A workout is finished only with at least one set done.
     NothingDone,
+    /// Another day cannot start while a set of the workout in progress is done.
+    WorkoutStarted,
     /// An exercise needs a name.
     EmptyName,
     /// An exercise name is at most [`MAX_NAME_CHARS`] characters.
@@ -39,6 +41,9 @@ impl fmt::Display for TrackerError {
             TrackerError::UnknownExercise(id) => write!(f, "no exercise has the id {id:?}"),
             TrackerError::NoSuchSet => write!(f, "the workout has no such set"),
             TrackerError::NothingDone => write!(f, "mark at least one set done to finish"),
+            TrackerError::WorkoutStarted => {
+                write!(f, "finish this workout or undo its done sets to switch day")
+            }
             TrackerError::EmptyName => write!(f, "an exercise needs a name"),
             TrackerError::NameTooLong => {
                 write!(f, "an exercise name is at most {MAX_NAME_CHARS} characters")
@@ -99,12 +104,15 @@ impl Tracker {
 
     /// Adds a dumbbell weight to the rack.
     pub fn add_weight(&mut self, weight: Weight) -> Result<(), TrackerError> {
-        self.rack.add(weight).map_err(TrackerError::Rack)
+        self.rack.add(weight).map_err(TrackerError::Rack)?;
+        self.refresh_unstarted_workout();
+        Ok(())
     }
 
     /// Removes a dumbbell weight from the rack; logged sets keep it.
     pub fn remove_weight(&mut self, weight: Weight) {
         self.rack.remove(weight);
+        self.refresh_unstarted_workout();
     }
 
     /// Workouts a week the user aims for.
@@ -239,7 +247,7 @@ impl Tracker {
         }
     }
 
-    /// A workout no set of which is done follows plan changes.
+    /// A workout no set of which is done follows plan and rack changes.
     fn refresh_unstarted_workout(&mut self) {
         let unstarted = self.draft.as_ref().filter(|draft| !draft.any_done());
         if let Some(day) = unstarted.map(|draft| draft.day) {

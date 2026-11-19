@@ -114,7 +114,7 @@ fn a_workout_needs_a_done_set_to_finish() {
 #[test]
 fn skipping_to_another_day_continues_the_rotation_from_it() {
     let mut tracker = Tracker::default();
-    tracker.choose_day(Day::Legs);
+    tracker.choose_day(Day::Legs).expect("not started");
     assert_eq!(tracker.workout().day, Day::Legs);
     do_every_set(&mut tracker);
     tracker.finish(date("2026-11-18")).expect("finished");
@@ -146,7 +146,7 @@ fn the_next_workout_prefills_one_more_rep_then_the_next_dumbbell() {
     do_every_set(&mut tracker);
     tracker.finish(date("2026-11-17")).expect("finished");
     let advice = tracker.target(&id("floor-press")).expect("known").advice;
-    tracker.choose_day(Day::Push);
+    tracker.choose_day(Day::Push).expect("not started");
     assert_eq!(
         (advice, first_reps(&mut tracker)),
         (Advice::AddReps, vec![9, 9, 9])
@@ -276,7 +276,7 @@ fn the_week_counts_workouts_and_sets_per_muscle_from_monday() {
     let mut tracker = Tracker::default();
     tracker.set_weekly_goal(4);
     for day in ["2026-11-15", "2026-11-16", "2026-11-18"] {
-        tracker.choose_day(Day::Push);
+        tracker.choose_day(Day::Push).expect("not started");
         do_every_set(&mut tracker);
         tracker.finish(date(day)).expect("finished");
     }
@@ -311,7 +311,7 @@ fn progress_lists_workouts_newest_first_with_the_best_set() {
     tracker.toggle_done(at(0, 0)).expect("a set");
     tracker.toggle_done(at(0, 1)).expect("a set");
     tracker.finish(date("2026-11-16")).expect("finished");
-    tracker.choose_day(Day::Push);
+    tracker.choose_day(Day::Push).expect("not started");
     tracker.toggle_done(at(0, 0)).expect("a set");
     tracker.finish(date("2026-11-18")).expect("finished");
     let progress = tracker.progress(&id("floor-press")).expect("known");
@@ -352,4 +352,71 @@ fn load_refuses_other_versions_garbage_and_unknown_exercises() {
     for text in cases {
         assert!(Tracker::load(&text).is_err(), "{text}");
     }
+}
+
+#[test]
+fn load_refuses_values_the_tracker_never_writes() {
+    let mut tracker = Tracker::default();
+    tracker
+        .add_exercise("Zottman curl", Muscle::Biceps)
+        .expect("added");
+    tracker.workout();
+    tracker.toggle_done(at(0, 0)).expect("a set");
+    tracker.finish(date("2026-11-18")).expect("finished");
+    let saved = tracker.save();
+    assert!(Tracker::load(&saved).is_ok());
+    let cases = [
+        (
+            "a zero dumbbell",
+            saved.replace("\"rack\":[50,", "\"rack\":[0,50,"),
+        ),
+        (
+            "a backwards rep range",
+            saved.replace("\"min\":8,\"max\":12", "\"min\":12,\"max\":8"),
+        ),
+        ("no reps", saved.replace("\"reps\":8", "\"reps\":0")),
+        (
+            "too many reps",
+            saved.replace("\"reps\":8", "\"reps\":4294967295"),
+        ),
+    ];
+    for (name, text) in cases {
+        assert_ne!(text, saved, "{name} changed nothing");
+        assert!(Tracker::load(&text).is_err(), "{name}");
+    }
+}
+
+#[test]
+fn another_day_is_refused_once_a_set_is_done() {
+    let mut tracker = Tracker::default();
+    tracker.workout();
+    tracker.toggle_done(at(0, 0)).expect("a set");
+    let refused = tracker.choose_day(Day::Legs);
+    let same_day = tracker.choose_day(Day::Push);
+    let kept = tracker.workout().any_done();
+    assert_eq!(
+        (refused, same_day, kept),
+        (Err(TrackerError::WorkoutStarted), Ok(()), true)
+    );
+}
+
+#[test]
+fn another_day_is_allowed_once_done_sets_are_undone() {
+    let mut tracker = Tracker::default();
+    tracker.workout();
+    tracker.toggle_done(at(0, 0)).expect("a set");
+    tracker.toggle_done(at(0, 0)).expect("a set");
+    assert_eq!(tracker.choose_day(Day::Legs), Ok(()));
+    assert_eq!(tracker.workout().day, Day::Legs);
+}
+
+#[test]
+fn an_unstarted_workout_follows_rack_changes() {
+    let mut tracker = Tracker::default();
+    tracker.workout();
+    tracker.remove_weight(Weight::whole(5));
+    let first_weight = |tracker: &mut Tracker| tracker.workout().exercises[0].sets[0].weight;
+    assert_eq!(first_weight(&mut tracker), Weight::whole(10));
+    tracker.add_weight(Weight::from_tenths(25)).expect("added");
+    assert_eq!(first_weight(&mut tracker), Weight::from_tenths(25));
 }

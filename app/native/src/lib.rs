@@ -52,14 +52,16 @@ impl Tracker {
         Ok(())
     }
 
-    /// The workout in progress, starting the suggested day's when there is none.
-    pub fn workout(&mut self) -> Workout {
+    /// The workout in progress, starting the suggested day's when there is none. Throws if it names an exercise the
+    /// tracker lacks, which saved data that loaded never does.
+    pub fn workout(&mut self) -> Result<Workout, String> {
         views::workout(&mut self.core)
     }
 
-    /// Starts `day`'s workout in place of the one in progress, whose sets are dropped.
-    pub fn choose_day(&mut self, day: Day) {
-        self.core.choose_day(day.into());
+    /// Starts `day`'s workout in place of the one in progress. Throws once a set of another day's workout is done;
+    /// choosing the day already started keeps its sets.
+    pub fn choose_day(&mut self, day: Day) -> Result<(), String> {
+        self.core.choose_day(day.into()).map_err(message)
     }
 
     /// Steps the set's weight to the next owned dumbbell up (or down). Throws for a set the workout lacks.
